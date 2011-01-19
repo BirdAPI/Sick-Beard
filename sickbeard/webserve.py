@@ -1410,7 +1410,30 @@ class Home:
             "SELECT * FROM tv_episodes WHERE showid = ? ORDER BY season*1000+episode DESC",
             [showObj.tvdbid]
         )
-
+        
+        #mine
+        import MySQLdb
+        watchedResults = {}
+        conn = MySQLdb.connect (host="localhost",
+                                user="xbmc",
+                                passwd="xbmc",
+                                db="xbmc_video")
+        cursor = conn.cursor()
+        for epResult in sqlResults:
+            query = "SELECT watched FROM `episodeview2` WHERE seriesName = \"%s\" AND season = %i AND epNumber = %i" % ( showObj.name, int(epResult["season"]), int(epResult["episode"]) )
+            cursor.execute(query)
+            res = cursor.fetchall()
+            watched = "N/A"
+            if len(res) == 1:
+                if res[0][0]:
+                    watched = "Watched"
+                else:
+                    watched = "New"
+            watchedResults[epResult["episode_id"]] = watched
+        cursor.close()
+        conn.close()
+        #end-mine
+        
         t = PageTemplate(file="displayShow.tmpl")
         t.submenu = [ { 'title': 'Edit',              'path': 'home/editShow?show=%d'%showObj.tvdbid } ]
 
@@ -1445,7 +1468,11 @@ class Home:
         t.show = showObj
         t.sqlResults = sqlResults
         t.seasonResults = seasonResults
-
+        
+        #mine
+        t.watchedResults = watchedResults
+        #end-mine
+        
         epCounts = {}
         epCats = {}
         epCounts[Overview.SKIPPED] = 0
