@@ -113,7 +113,7 @@ All other statuses will automatically update to the appropriate "Downloaded ..."
         <h2>#if int($epResult["season"]) == 0 then "Specials" else "Season "+str($epResult["season"])#</h2>
     </td>
   </tr>
-  <tr id="season-$epResult["season"]-cols"><th width="1%"><input type="checkbox" class="seasonCheck" id="$epResult["season"]"></th><th>NFO</th><th>TBN</th><th>Episode</th><th>Name</th><th>Airdate</th><th>Filename</th><th>Status</th><th>XBMC</th><th>Actions</th></tr>
+  <tr id="season-$epResult["season"]-cols"><th width="1%"><input type="checkbox" class="seasonCheck" id="$epResult["season"]"></th><th>NFO</th><th>TBN</th><th>Episode</th><th>Name</th><th>Airdate</th><th>Filename</th><th>Status</th><!--mine--><th>XBMC</th><!--endmine--><th>Actions</th></tr>
         #set $curSeason = int($epResult["season"])
     #end if    
 
@@ -144,6 +144,7 @@ $epLoc
 
     </td>
     <td>$statusStrings[int($epResult["status"])]</td>
+    <!--mine-->
     <td align="center">
     #if $watchedResults[$epResult["episode_id"]] == "New"
         <img src="$sbRoot/images/xbmc/xbmc_new.png" />
@@ -153,6 +154,7 @@ $epLoc
         <img src="$sbRoot/images/xbmc/xbmc_na.png" />
     #end if
     </td>
+    <!--endmine-->
     <td align="center">
     #if int($epResult["season"]) != 0: 
     <a href="searchEpisode?show=$show.tvdbid&season=$epResult["season"]&episode=$epResult["episode"]"><img src="$sbRoot/images/search32.png" height="16" alt="search"/></a>

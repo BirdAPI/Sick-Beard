@@ -3,6 +3,10 @@
 #from sickbeard.common import *
 #from sickbeard import db
 
+##mine
+#import MySQLdb
+##endmine
+
 #set global $title="Home"
 #set global $header="Show List"
 
@@ -139,7 +143,7 @@
 
 <table id="showListTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
 
-  <thead><tr><th>Next Ep</th><th>Show</th><th>Network</th><th>Quality</th><th>Downloads</th><th>Active</th><th>Status</th></tr></thead>
+  <thead><tr><th>Next Ep</th><th>Show</th><th>Network</th><th>Quality</th><th>Downloads</th><th>Active</th><!--mine--><th>XBMC</th><!--endmine--><th>Status</th></tr></thead>
   <tbody>
 
 #for $curLoadingShow in $sickbeard.showQueueScheduler.action.loadingShowList:
@@ -167,8 +171,20 @@
 
 #set $myShowList = $sickbeard.showList
 $myShowList.sort(lambda x, y: cmp(x.name, y.name))
+
+<!--mine-->
+#set $conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
+#set $cursor = $conn.cursor()
+<!--endmine-->
+
 #for $curShow in $myShowList:
 #set $curEp = $curShow.nextEpisode()
+
+<!--mine-->
+#set $query = "SELECT totalEps, newEps FROM `tvshowview2` WHERE seriesName = \"%s\" LIMIT 1" % $curShow.name
+#set $out = $cursor.execute($query)
+#set $res = $cursor.fetchall()
+<!--endmine-->
 
 #set $curShowDownloads = [x[1] for x in $downloadedEps if int(x[0]) == $curShow.tvdbid]
 #set $curShowAll = [x[1] for x in $allEps if int(x[0]) == $curShow.tvdbid]
@@ -187,7 +203,6 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
   #set $nom = 0
   #set $den = 1
 #end if
-
   <tr>
     <td align="center" nowrap="nowrap">#if len($curEp) != 0 then $curEp[0].airdate else ""#</td>
     <td><a href="$sbRoot/home/displayShow?show=$curShow.tvdbid">$curShow.name</a></td>
@@ -201,6 +216,18 @@ Custom
     </td>
     <td align="center"><!--$dlStat--><div id="progressbar$curShow.tvdbid" style="position:relative;"></div></td>
     <td align="center"><img src="$sbRoot/images/#if int($curShow.paused) == 0 and $curShow.status != "Ended" then "yes32.png\" alt=\"Y\"" else "no32.png\" alt=\"N\""# width="16" height="16" /></td>
+    <!--mine-->
+    <td align="center">
+    #set $length = len($res)
+    #if $length == 1 and $res[0][1] > 0:
+        <img src="$sbRoot/images/xbmc/xbmc_new.png" />
+    #else if $length == 1 and $res[0][1] == 0:
+        <img src="$sbRoot/images/xbmc/xbmc_watched.png" />
+    #else if $length == 0:
+        <img src="$sbRoot/images/xbmc/xbmc_na.png" />
+    #end if
+    </td>
+    <!--endmine-->
     <td align="center">$curShow.status</td>
   </tr>
 
@@ -214,6 +241,10 @@ Custom
 </script>
 
 #end for
+<!--mine-->
+#$cursor.close()
+#$conn.close()
+<!--endmine-->
 </tbody>
 </table>
 

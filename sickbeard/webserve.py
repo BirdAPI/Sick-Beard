@@ -59,7 +59,6 @@ import sickbeard
 
 from sickbeard import browser
 
-
 class PageTemplate (Template):
     def __init__(self, *args, **KWs):
         KWs['file'] = os.path.join(sickbeard.PROG_DIR, "data/interfaces/default/", KWs['file'])
