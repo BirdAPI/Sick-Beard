@@ -1416,7 +1416,10 @@ class Home:
         conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
         cursor = conn.cursor()
         query = """
-                SELECT `episode`.c12 AS season, `episode`.c13 AS epNumber, `files`.playCount IS NOT NULL AS watched FROM `episode` 
+                SELECT  `episode`.c12 AS season, 
+                        `episode`.c13 AS epNumber, 
+                        `files`.playCount IS NOT NULL AS watched 
+                FROM `episode` 
                 JOIN `files` on `episode`.idFile = `files`.idFile
                 JOIN `tvshowlinkepisode` on `episode`.idEpisode = `tvshowlinkepisode`.idEpisode
                 JOIN `tvshow` on `tvshowlinkepisode`.idShow = `tvshow`.idShow

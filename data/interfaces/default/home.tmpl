@@ -175,7 +175,7 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 <!--mine-->
 #set $conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
 #set $cursor = $conn.cursor()
-#set query = "SELECT seriesName, totalEps, newEps FROM `tvshowview2` ORDER BY seriesName"
+#set $query = "SELECT `tvshow`.c00 AS seriesName, COUNT(`episode`.idEpisode) AS totalEps, SUM(`files`.playCount IS NULL) AS newEps FROM `tvshow` JOIN `tvshowlinkepisode` ON `tvshow`.idShow = `tvshowlinkepisode`.idShow JOIN `episode` ON `tvshowlinkepisode`.idEpisode = `episode`.idEpisode JOIN `files` ON `episode`.idFile = `files`.idFile GROUP BY `tvshow`.idShow ORDER BY seriesName"
 #set $out = $cursor.execute($query)
 #set $rows = $cursor.fetchall()
 <!--endmine-->
