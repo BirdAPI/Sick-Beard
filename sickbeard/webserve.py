@@ -1411,31 +1411,38 @@ class Home:
         )
         
         #mine
-        import MySQLdb
+        useSqlite = True
+        enableXBMCWatched = False
         watchedResults = {}
-        conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
-        cursor = conn.cursor()
-        query = """
-                SELECT  `episode`.c12 AS season, 
-                        `episode`.c13 AS epNumber, 
-                        `files`.playCount IS NOT NULL AS watched 
-                FROM `episode` 
-                JOIN `files` on `episode`.idFile = `files`.idFile
-                JOIN `tvshowlinkepisode` on `episode`.idEpisode = `tvshowlinkepisode`.idEpisode
-                JOIN `tvshow` on `tvshowlinkepisode`.idShow = `tvshow`.idShow
-                WHERE `tvshow`.c00 = "%s"
-                """ % ( showObj.name )
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        for epResult in sqlResults:
-            watched = "N/A"
-            for row in rows:
-                if int(row[0]) == int(epResult["season"]) and int(row[1]) == int(epResult["episode"]):
-                    watched = "Watched" if row[2] else "New"
-                    break
-            watchedResults[epResult["episode_id"]] = watched
-        cursor.close()
-        conn.close()
+        if enableXBMCWatched:
+            if useSqlite:
+                import sqlite3
+                conn = sqlite3.connect("C:/Users/BirdTV/AppData/Roaming/XBMC/userdata/Database/MyVideos34.db", 20)
+            else:
+                import MySQLdb
+                conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
+            cursor = conn.cursor()
+            query = """
+                    SELECT  episode.c12 AS season, 
+                            episode.c13 AS epNumber, 
+                            files.playCount IS NOT NULL AS watched 
+                    FROM episode
+                    JOIN files ON episode.idFile = files.idFile
+                    JOIN tvshowlinkepisode ON episode.idEpisode = tvshowlinkepisode.idEpisode
+                    JOIN tvshow ON tvshowlinkepisode.idShow = tvshow.idShow
+                    WHERE tvshow.c00 = "%s"
+                    """ % ( showObj.name )
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            for epResult in sqlResults:
+                watched = "N/A"
+                for row in rows:
+                    if int(row[0]) == int(epResult["season"]) and int(row[1]) == int(epResult["episode"]):
+                        watched = "Watched" if row[2] else "New"
+                        break
+                watchedResults[epResult["episode_id"]] = watched
+            cursor.close()
+            conn.close()
         #end-mine
         
         t = PageTemplate(file="displayShow.tmpl")
@@ -1475,6 +1482,7 @@ class Home:
         
         #mine
         t.watchedResults = watchedResults
+        t.enableXBMCWatched = enableXBMCWatched
         #end-mine
         
         epCounts = {}

@@ -113,7 +113,12 @@ All other statuses will automatically update to the appropriate "Downloaded ..."
         <h2>#if int($epResult["season"]) == 0 then "Specials" else "Season "+str($epResult["season"])#</h2>
     </td>
   </tr>
-  <tr id="season-$epResult["season"]-cols"><th width="1%"><input type="checkbox" class="seasonCheck" id="$epResult["season"]"></th><th>NFO</th><th>TBN</th><th>Episode</th><th>Name</th><th>Airdate</th><th>Filename</th><th>Status</th><!--mine--><th>XBMC</th><!--endmine--><th>Actions</th></tr>
+  <tr id="season-$epResult["season"]-cols"><th width="1%"><input type="checkbox" class="seasonCheck" id="$epResult["season"]"></th><th>NFO</th><th>TBN</th><th>Episode</th><th>Name</th><th>Airdate</th><th>Filename</th><th>Status</th>
+        #if $enableXBMCWatched
+            <th>XBMC</th>
+        #end if
+        <th>Actions</th>
+  </tr>
         #set $curSeason = int($epResult["season"])
     #end if    
 
@@ -145,15 +150,17 @@ $epLoc
     </td>
     <td>$statusStrings[int($epResult["status"])]</td>
     <!--mine-->
-    <td align="center">
-    #if $watchedResults[$epResult["episode_id"]] == "New"
-        <img src="$sbRoot/images/xbmc/xbmc_new.png" />
-    #else if $watchedResults[$epResult["episode_id"]] == "Watched"
-        <img src="$sbRoot/images/xbmc/xbmc_watched.png" />
-    #else
-        <img src="$sbRoot/images/xbmc/xbmc_na.png" />
+    #if $enableXBMCWatched:
+        <td align="center">
+        #if $watchedResults[$epResult["episode_id"]] == "New"
+            <img src="$sbRoot/images/xbmc/xbmc_new.png" />
+        #else if $watchedResults[$epResult["episode_id"]] == "Watched"
+            <img src="$sbRoot/images/xbmc/xbmc_watched.png" />
+        #else
+            <img src="$sbRoot/images/xbmc/xbmc_na.png" />
+        #end if
+        </td>
     #end if
-    </td>
     <!--endmine-->
     <td align="center">
     #if int($epResult["season"]) != 0: 
