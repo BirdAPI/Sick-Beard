@@ -175,15 +175,26 @@ $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 <!--mine-->
 #set $conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
 #set $cursor = $conn.cursor()
+#set query = "SELECT seriesName, totalEps, newEps FROM `tvshowview2` ORDER BY seriesName"
+#set $out = $cursor.execute($query)
+#set $rows = $cursor.fetchall()
 <!--endmine-->
 
 #for $curShow in $myShowList:
 #set $curEp = $curShow.nextEpisode()
 
 <!--mine-->
-#set $query = "SELECT totalEps, newEps FROM `tvshowview2` WHERE seriesName = \"%s\" LIMIT 1" % $curShow.name
-#set $out = $cursor.execute($query)
-#set $res = $cursor.fetchall()
+#set $watched = "N/A"
+#for $row in rows:
+    #if $row[0] == $curShow.name:
+        #if $row[1] > 0 and row[2] > 0:
+            #set $watched = "New"
+        #elif $row[1] > 0:
+            #set $watched = "Watched"
+        #end if
+        #break
+    #end if
+#end for
 <!--endmine-->
 
 #set $curShowDownloads = [x[1] for x in $downloadedEps if int(x[0]) == $curShow.tvdbid]
@@ -218,12 +229,11 @@ Custom
     <td align="center"><img src="$sbRoot/images/#if int($curShow.paused) == 0 and $curShow.status != "Ended" then "yes32.png\" alt=\"Y\"" else "no32.png\" alt=\"N\""# width="16" height="16" /></td>
     <!--mine-->
     <td align="center">
-    #set $length = len($res)
-    #if $length == 1 and $res[0][1] > 0:
+    #if $watched == "New":
         <img src="$sbRoot/images/xbmc/xbmc_new.png" />
-    #else if $length == 1 and $res[0][1] == 0:
+    #else if $watched == "Watched":
         <img src="$sbRoot/images/xbmc/xbmc_watched.png" />
-    #else if $length == 0:
+    #else:
         <img src="$sbRoot/images/xbmc/xbmc_na.png" />
     #end if
     </td>
