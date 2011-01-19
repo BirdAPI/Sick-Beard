@@ -3,10 +3,6 @@
 #from sickbeard.common import *
 #from sickbeard import db
 
-##mine
-#import MySQLdb
-##endmine
-
 #set global $title="Home"
 #set global $header="Show List"
 
@@ -143,7 +139,12 @@
 
 <table id="showListTable" class="sickbeardTable tablesorter" cellspacing="1" border="0" cellpadding="0">
 
-  <thead><tr><th>Next Ep</th><th>Show</th><th>Network</th><th>Quality</th><th>Downloads</th><th>Active</th><!--mine--><th>XBMC</th><!--endmine--><th>Status</th></tr></thead>
+  <thead><tr><th>Next Ep</th><th>Show</th><th>Network</th><th>Quality</th><th>Downloads</th><th>Active</th>
+        #if $enableXBMCWatched:
+            <th>XBMC</th>
+        #end if
+        <th>Status</th>
+  </tr></thead>
   <tbody>
 
 #for $curLoadingShow in $sickbeard.showQueueScheduler.action.loadingShowList:
@@ -173,28 +174,38 @@
 $myShowList.sort(lambda x, y: cmp(x.name, y.name))
 
 <!--mine-->
-#set $conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
-#set $cursor = $conn.cursor()
-#set $query = "SELECT `tvshow`.c00 AS seriesName, COUNT(`episode`.idEpisode) AS totalEps, SUM(`files`.playCount IS NULL) AS newEps FROM `tvshow` JOIN `tvshowlinkepisode` ON `tvshow`.idShow = `tvshowlinkepisode`.idShow JOIN `episode` ON `tvshowlinkepisode`.idEpisode = `episode`.idEpisode JOIN `files` ON `episode`.idFile = `files`.idFile GROUP BY `tvshow`.idShow ORDER BY seriesName"
-#set $out = $cursor.execute($query)
-#set $rows = $cursor.fetchall()
+#if $enableXBMCWatched:
+    #if $useSqlite:
+        #import sqlite3
+        #set $conn = sqlite3.connect("C:/Users/BirdTV/AppData/Roaming/XBMC/userdata/Database/MyVideos34.db", 20)
+    #else:
+        #import MySQLdb
+        #set $conn = MySQLdb.connect(host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
+    #end if
+    #set $cursor = $conn.cursor()
+    #set $query = "SELECT tvshow.c00 AS seriesName, COUNT(episode.idEpisode) AS totalEps, SUM(files.playCount IS NULL) AS newEps FROM tvshow JOIN tvshowlinkepisode ON tvshow.idShow = tvshowlinkepisode.idShow JOIN episode ON tvshowlinkepisode.idEpisode = episode.idEpisode JOIN files ON episode.idFile = files.idFile GROUP BY tvshow.idShow ORDER BY seriesName"
+    #set $result = $cursor.execute($query)
+    #set $rows = $cursor.fetchall()
+#end if
 <!--endmine-->
 
 #for $curShow in $myShowList:
 #set $curEp = $curShow.nextEpisode()
 
 <!--mine-->
-#set $watched = "N/A"
-#for $row in rows:
-    #if $row[0] == $curShow.name:
-        #if $row[1] > 0 and row[2] > 0:
-            #set $watched = "New"
-        #elif $row[1] > 0:
-            #set $watched = "Watched"
+#if $enableXBMCWatched:
+    #set $watched = "N/A"
+    #for $row in rows:
+        #if $row[0] == $curShow.name:
+            #if $row[1] > 0 and row[2] > 0:
+                #set $watched = "New"
+            #elif $row[1] > 0:
+                #set $watched = "Watched"
+            #end if
+            #break
         #end if
-        #break
-    #end if
-#end for
+    #end for
+#end if
 <!--endmine-->
 
 #set $curShowDownloads = [x[1] for x in $downloadedEps if int(x[0]) == $curShow.tvdbid]
@@ -228,15 +239,17 @@ Custom
     <td align="center"><!--$dlStat--><div id="progressbar$curShow.tvdbid" style="position:relative;"></div></td>
     <td align="center"><img src="$sbRoot/images/#if int($curShow.paused) == 0 and $curShow.status != "Ended" then "yes32.png\" alt=\"Y\"" else "no32.png\" alt=\"N\""# width="16" height="16" /></td>
     <!--mine-->
-    <td align="center">
-    #if $watched == "New":
-        <img src="$sbRoot/images/xbmc/xbmc_new.png" />
-    #else if $watched == "Watched":
-        <img src="$sbRoot/images/xbmc/xbmc_watched.png" />
-    #else:
-        <img src="$sbRoot/images/xbmc/xbmc_na.png" />
+    #if $enableXBMCWatched:
+        <td align="center">
+        #if $watched == "New":
+            <img src="$sbRoot/images/xbmc/xbmc_new.png" />
+        #else if $watched == "Watched":
+            <img src="$sbRoot/images/xbmc/xbmc_watched.png" />
+        #else:
+            <img src="$sbRoot/images/xbmc/xbmc_na.png" />
+        #end if
+        </td>
     #end if
-    </td>
     <!--endmine-->
     <td align="center">$curShow.status</td>
   </tr>
@@ -252,8 +265,10 @@ Custom
 
 #end for
 <!--mine-->
-$cursor.close()
-$conn.close()
+#if $enableXBMCWatched:
+    $cursor.close()
+    $conn.close()
+#end if
 <!--endmine-->
 </tbody>
 </table>

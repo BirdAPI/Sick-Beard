@@ -1310,6 +1310,10 @@ class Home:
 
         t = PageTemplate(file="home.tmpl")
         t.submenu = HomeMenu()
+        #mine
+        t.useSqlite = True
+        t.enableXBMCWatched = True
+        #endmine
         return _munge(t)
 
     addShows = NewHomeAddShows()
@@ -1420,7 +1424,7 @@ class Home:
                 conn = sqlite3.connect("C:/Users/BirdTV/AppData/Roaming/XBMC/userdata/Database/MyVideos34.db", 20)
             else:
                 import MySQLdb
-                conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
+                conn = MySQLdb.connect(host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
             cursor = conn.cursor()
             query = """
                     SELECT  episode.c12 AS season, 
