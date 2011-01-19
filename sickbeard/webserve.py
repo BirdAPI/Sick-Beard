@@ -1413,21 +1413,17 @@ class Home:
         #mine
         import MySQLdb
         watchedResults = {}
-        conn = MySQLdb.connect (host="localhost",
-                                user="xbmc",
-                                passwd="xbmc",
-                                db="xbmc_video")
+        conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
         cursor = conn.cursor()
+        query = "SELECT season, epNumber, watched FROM `episodeview2` WHERE seriesName = \"%s\"" % ( showObj.name )
+        cursor.execute(query)
+        rows = cursor.fetchall()
         for epResult in sqlResults:
-            query = "SELECT watched FROM `episodeview2` WHERE seriesName = \"%s\" AND season = %i AND epNumber = %i" % ( showObj.name, int(epResult["season"]), int(epResult["episode"]) )
-            cursor.execute(query)
-            res = cursor.fetchall()
             watched = "N/A"
-            if len(res) == 1:
-                if res[0][0]:
-                    watched = "Watched"
-                else:
-                    watched = "New"
+            for row in rows:
+                if int(row[0]) == int(epResult["season"]) and int(row[1]) == int(epResult["episode"]):
+                    watched = "Watched" if row[2] else "New"
+                    break
             watchedResults[epResult["episode_id"]] = watched
         cursor.close()
         conn.close()
