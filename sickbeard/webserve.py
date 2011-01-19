@@ -1415,7 +1415,13 @@ class Home:
         watchedResults = {}
         conn = MySQLdb.connect (host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
         cursor = conn.cursor()
-        query = "SELECT season, epNumber, watched FROM `episodeview2` WHERE seriesName = \"%s\"" % ( showObj.name )
+        query = """
+                SELECT `episode`.c12 AS season, `episode`.c13 AS epNumber, `files`.playCount IS NOT NULL AS watched FROM `episode` 
+                JOIN `files` on `episode`.idFile = `files`.idFile
+                JOIN `tvshowlinkepisode` on `episode`.idEpisode = `tvshowlinkepisode`.idEpisode
+                JOIN `tvshow` on `tvshowlinkepisode`.idShow = `tvshow`.idShow
+                WHERE `tvshow`.c00 = "%s"
+                """ % ( showObj.name )
         cursor.execute(query)
         rows = cursor.fetchall()
         for epResult in sqlResults:
