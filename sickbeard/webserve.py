@@ -1417,18 +1417,12 @@ class Home:
         )
         
         #mine
-        useSqlite = False
-        enableXBMCWatched = True
+        ENABLE_XBMC_WATCHED = True
+        USE_XBMC_API = True
+        USE_SQLITE = False
         watchedResults = {}
-        if enableXBMCWatched:
-            if useSqlite:
-                import sqlite3
-                conn = sqlite3.connect("C:/Users/BirdTV/AppData/Roaming/XBMC/userdata/Database/MyVideos34.db", 20)
-            else:
-                import MySQLdb
-                conn = MySQLdb.connect(host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
-            cursor = conn.cursor()
-            query = """
+        if ENABLE_XBMC_WATCHED:
+            sqlQuery = """
                     SELECT  episode.c12 AS season, 
                             episode.c13 AS epNumber, 
                             files.playCount IS NOT NULL AS watched 
@@ -1438,17 +1432,77 @@ class Home:
                     JOIN tvshow ON tvshowlinkepisode.idShow = tvshow.idShow
                     WHERE tvshow.c00 = "%s"
                     """ % ( showObj.name )
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            for epResult in sqlResults:
-                watched = "N/A"
-                for row in rows:
-                    if int(row[0]) == int(epResult["season"]) and int(row[1]) == int(epResult["episode"]):
-                        watched = "Watched" if row[2] else "New"
-                        break
-                watchedResults[epResult["episode_id"]] = watched
-            cursor.close()
-            conn.close()
+            if USE_XBMC_API:
+                anyHostsUp = False
+                # Check each host if they are up and use the first one available
+                for curHost in [x.strip() for x in sickbeard.XBMC_HOST.split(",")]:
+                    colonIndex = curHost.find(":")
+                    if colonIndex != -1:
+                        # Get everything before the colon as the Host
+                        host = curHost[:colonIndex]
+                        # Get everything after the colon as the Port
+                        port = curHost[colonIndex + 1:]
+                        # Check if the xbmc host is up (using a 0.5 second timeout to prevent slowdowns from down hosts) -- But will this cause false negatives?
+                        if notifiers.xbmc.isHostUp(host, port, 0.5) == "Up":
+                            onlineHost = curHost
+                            anyHostsUp = True
+                            break
+                if not anyHostsUp:
+                    # Temporarily disable the xbmc watched feature
+                    ENABLE_XBMC_WATCHED = False
+                    logger.log(u"XBMC watched integration enabled, but no xbmc hosts are responding", logger.ERROR)
+                else:
+                    logger.log(u"XBMC watched integration connecting to " + onlineHost)
+                    # Use this to get xml back for the path lookups
+                    xmlCommand = {'command': 'SetResponseFormat(webheader;false;webfooter;false;header;<xml>;footer;</xml>;opentag;<tag>;closetag;</tag>;closefinaltag;false)'}
+                    # SQL Query
+                    sqlCommand = {'command': 'QueryVideoDatabase(%s)' % (sqlQuery)}
+                    # Set output back to default
+                    resetCommand = {'command': 'SetResponseFormat()'}
+                    # Set xml response format, only continue if this works
+                    request = notifiers.xbmc_notifier._sendToXBMC(xmlCommand, onlineHost)
+                    if not request:
+                        logger.log(u"XBMC host failed to set output mode", logger.ERROR)
+                    else:
+                        sqlXML = notifiers.xbmc_notifier._sendToXBMC(sqlCommand, onlineHost)
+                        request = notifiers.xbmc_notifier._sendToXBMC(resetCommand, onlineHost)
+                        encSqlXML = urllib.quote(sqlXML,':\\/<>')
+                        try:
+                            et = etree.fromstring(encSqlXML)
+                        except SyntaxError, e:
+                            logger.log("Unable to parse XML returned from XBMC: "+str(e), logger.ERROR)
+                            #return False
+                        fields = et.findall('.//field')
+                        resultLength = len(fields)
+                        # Select command returned 3 things, we need to split it up
+                        # and put it in the same format the other sql queries will return 
+                        if resultLength % 3 == 0:
+                            rows = []
+                            i = 0
+                            while i + 3 <= resultLength:
+                                rows.append([ fields[i].text, fields[i+1].text, fields[i+2].text ])
+                                i += 3
+            else:
+                if USE_SQLITE:
+                    import sqlite3
+                    conn = sqlite3.connect("C:/Users/BirdTV/AppData/Roaming/XBMC/userdata/Database/MyVideos34.db", 20)
+                else:
+                    import MySQLdb
+                    conn = MySQLdb.connect(host="localhost", user="xbmc", passwd="xbmc", db="xbmc_video")
+                cursor = conn.cursor()
+                cursor.execute(sqlQuery)
+                rows = cursor.fetchall()
+                cursor.close()
+                conn.close()
+                
+            if ENABLE_XBMC_WATCHED and rows is not None:    
+                for epResult in sqlResults:
+                    watched = "N/A"
+                    for row in rows:
+                        if int(row[0]) == int(epResult["season"]) and int(row[1]) == int(epResult["episode"]):
+                            watched = "Watched" if row[2] else "New"
+                            break
+                    watchedResults[epResult["episode_id"]] = watched
         #end-mine
         
         t = PageTemplate(file="displayShow.tmpl")
@@ -1488,7 +1542,7 @@ class Home:
         
         #mine
         t.watchedResults = watchedResults
-        t.enableXBMCWatched = enableXBMCWatched
+        t.enableXBMCWatched = ENABLE_XBMC_WATCHED
         #end-mine
         
         epCounts = {}

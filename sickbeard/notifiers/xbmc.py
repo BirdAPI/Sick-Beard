@@ -216,12 +216,14 @@ def wakeOnLan(ethernet_address):
     ss.close()
 
 # Test Connection function
-def isHostUp(host,port):
+def isHostUp(host, port, timeout = None):
 
     (family, socktype, proto, garbage, address) = socket.getaddrinfo(host, port)[0]
     s = socket.socket(family, socktype, proto)
-
+    
     try:
+        if timeout is not None:
+            s.settimeout(timeout)
         s.connect(address)
         return "Up"
     except:
