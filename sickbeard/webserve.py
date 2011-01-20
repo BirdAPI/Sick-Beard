@@ -1500,7 +1500,7 @@ class Home:
                     watched = "N/A"
                     for row in rows:
                         if int(row[0]) == int(epResult["season"]) and int(row[1]) == int(epResult["episode"]):
-                            watched = "Watched" if row[2] else "New"
+                            watched = "Watched" if int(row[2]) == 1 else "New"
                             break
                     watchedResults[epResult["episode_id"]] = watched
         #end-mine
