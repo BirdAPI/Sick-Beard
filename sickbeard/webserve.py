@@ -1311,7 +1311,7 @@ class Home:
         t = PageTemplate(file="home.tmpl")
         t.submenu = HomeMenu()
         #mine
-        t.useSqlite = True
+        t.useSqlite = False
         t.enableXBMCWatched = True
         #endmine
         return _munge(t)
@@ -1415,8 +1415,8 @@ class Home:
         )
         
         #mine
-        useSqlite = True
-        enableXBMCWatched = False
+        useSqlite = False
+        enableXBMCWatched = True
         watchedResults = {}
         if enableXBMCWatched:
             if useSqlite:
