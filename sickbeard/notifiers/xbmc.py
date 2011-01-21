@@ -22,6 +22,7 @@ import socket
 import sys
 import base64
 import time, struct
+import sqlite3
 
 #import config
 
@@ -240,5 +241,150 @@ def checkHost(host, port):
         wakeOnLan(mac)
         time.sleep(20)
         i=i+1
+
+
+# Returns the first available xbmc host that is online, or None if none are online
+def getFirstOnlineHost(timeout = 0.5):
+    anyHostsUp = False
+    # Check each host if they are up and use the first one available
+    for curHost in [x.strip() for x in sickbeard.XBMC_HOST.split(",")]:
+        colonIndex = curHost.find(":")
+        if colonIndex != -1:
+            # Get everything before the colon as the Host
+            host = curHost[:colonIndex]
+            # Get everything after the colon as the Port
+            port = curHost[colonIndex + 1:]
+            # Check if the xbmc host is up (using a 0.5 second timeout to prevent slowdowns from down hosts) -- But will this cause false negatives?
+            if sickbeard.notifiers.xbmc.isHostUp(host, port, timeout) == "Up":
+                onlineHost = curHost
+                anyHostsUp = True
+                break
+    return onlineHost if anyHostsUp else None
+         
+
+         
+XBMC_DB_FILENAME = "C:/Users/BirdTV/AppData/Roaming/XBMC/userdata/Database/MyVideos34.db"
+
+MYSQL_HOST = "localhost"
+MYSQL_USERNAME = "xbmc"
+MYSQL_PASSWORD = "xbmc"
+
+XBMC_API = "XBMC_API"
+SQLITE = "SQLITE"
+MYSQL = "MYSQL"
+
+XBMC_WATCHED_METHOD = XBMC_API
+         
+class XBMCWatchedIntegration:
+    
+    # Returns the watched result for each episode in sbSqlEpisodes or None if there was an error
+    def getWatchedEpisodes(self, showName, sbSqlEpisodes):   
+        sqlQuery = """
+                SELECT  episode.c12 AS season, 
+                        episode.c13 AS epNumber, 
+                        files.playCount IS NOT NULL AS watched 
+                FROM episode
+                JOIN files ON episode.idFile = files.idFile
+                JOIN tvshowlinkepisode ON episode.idEpisode = tvshowlinkepisode.idEpisode
+                JOIN tvshow ON tvshowlinkepisode.idShow = tvshow.idShow
+                WHERE tvshow.c00 = "%s"
+                """ % ( showName )
+        rows = self.executeQuery(sqlQuery, 3)
+        if rows is None:
+            return None
+        else:
+            return self.__matchSqlWatchedEpisodeResults(sbSqlEpisodes, rows)
+        
+
+    # Given a list of xml fields and the fields per group
+    # This will return a list of tuples which contain fieldsPerGroup item each
+    def groupXmlFields(self, allFields, fieldsPerGroup):
+        resultLength = len(allFields)
+        rows = []
+        if resultLength % fieldsPerGroup != 0:
+            rows = None
+        else:
+            # Loop through and grab the itms out "fieldsPerGroup" items at a time
+            i = 0
+            while i + fieldsPerGroup <= resultLength:
+                #row = []
+                #for j in range(fieldsPerGroup):
+                #    row.append(allFields[i+j].text)
+                row = [ allFields[i+j].text for j in range(fieldsPerGroup) ]
+                rows.append(row)
+                i += fieldsPerGroup
+        return rows
+
+        
+    def executeQuery(self, sqlQuery, columnsCount):
+        if XBMC_WATCHED_METHOD == XBMC_API:
+            return self.__executeQuery_XBMC_API(sqlQuery, columnsCount)
+        elif XBMC_WATCHED_METHOD == SQLITE or XBMC_WATCHED_METHOD == MYSQL:
+            return self.__executeQuery_SQL(sqlQuery)
+        else:
+            return None
+
+            
+    def __executeQuery_XBMC_API(self, sqlQuery, columnsCount):
+        onlineHost = getFirstOnlineHost()
+        if onlineHost is None:
+            logger.log(u"No XBMC hosts are responding", logger.ERROR)
+            return None
+            
+        # Use this to get xml back for the path lookups
+        xmlCommand = {'command': 'SetResponseFormat(webheader;false;webfooter;false;header;<xml>;footer;</xml>;opentag;<tag>;closetag;</tag>;closefinaltag;false)'}
+        # SQL Query
+        sqlCommand = {'command': 'QueryVideoDatabase(%s)' % (sqlQuery)}
+        # Set output back to default
+        resetCommand = {'command': 'SetResponseFormat()'}
+        # Set xml response format, only continue if this works
+        request = sickbeard.notifiers.xbmc_notifier._sendToXBMC(xmlCommand, onlineHost)
+        if not request:
+            logger.log(u"XBMC host failed to set output mode", logger.ERROR)
+            return None
+            
+        sqlXML = sickbeard.notifiers.xbmc_notifier._sendToXBMC(sqlCommand, onlineHost)
+        request = sickbeard.notifiers.xbmc_notifier._sendToXBMC(resetCommand, onlineHost)
+        encSqlXML = urllib.quote(sqlXML,':\\/<>')
+        try:
+            et = etree.fromstring(encSqlXML)
+        except SyntaxError, e:
+            logger.log("Unable to parse XML returned from XBMC: "+str(e), logger.ERROR)
+            return None
+        fields = et.findall('.//field')
+        rows = self.groupXmlFields(fields, columnsCount)
+        return rows
+         
+                
+    def __executeQuery_SQL(self, sqlQuery):
+        if XBMC_WATCHED_METHOD == SQLITE:
+            conn = sqlite3.connect(XBMC_DB_FILENAME, 20)
+        elif XBMC_WATCHED_METHOD == MYSQL:
+            try:
+                import MySQLdb
+            except ImportError:
+                return None
+            conn = MySQLdb.connect(host=MYSQL_HOST, user=MYSQL_USERNAME, passwd=MYSQL_PASSWORD, db="xbmc_video")
+        else: 
+            return None
+        cursor = conn.cursor()
+        cursor.execute(sqlQuery)
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return rows
+    
+
+    def __matchSqlWatchedEpisodeResults(self, sbSqlEpisodes, sqlRows):
+        watchedResults = {}
+        for epResult in sbSqlEpisodes:
+            watched = "N/A"
+            for row in sqlRows:
+                if int(row[0]) == int(epResult["season"]) and int(row[1]) == int(epResult["episode"]):
+                    watched = "Watched" if int(row[2]) == 1 else "New"
+                    break
+            watchedResults[epResult["episode_id"]] = watched
+        return watchedResults
+
 
 notifier = XBMCNotifier
