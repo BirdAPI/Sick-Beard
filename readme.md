@@ -1,4 +1,4 @@
-Sickbeard + XBMC Watched Status Integration
+Sickbeard + XBMC Watched Status Integration -- BirdMod
 =====
 
 The idea behind this fork is to more closely integrate Sickbeard with XMBC, by providing XMBC watched statuses on the various pages of Sickbeard , so you can quickly see which episodes you have watched, directly from Sickbeard !
